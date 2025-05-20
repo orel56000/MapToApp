@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation"
 import { useEffect, useState, useRef } from "react"
 import { MapOpener } from "@/components/map-opener"
+import { LinkGenerator } from "@/components/link-generator"
 import { getLocationName } from "@/lib/geocoding"
 
 export default function Home() {
@@ -57,7 +58,8 @@ export default function Home() {
     const lng = searchParams.get("lng")
 
     if (!lat || !lng) {
-      setError("Missing location. Please include lat and lng in the URL, or a plus code.")
+      // No location parameters found - we'll show the link generator
+      setLocation(null)
       return
     }
 
@@ -94,10 +96,12 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50">
       <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6 space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-800">Open Location</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Location Opener</h1>
+
           {error ? (
             <p className="mt-2 text-red-500">{error}</p>
           ) : location ? (
+            // Show location opener when we have valid coordinates or plus code
             <>
               {locationName && <p className="mt-2 text-lg font-medium text-gray-700">{locationName}</p>}
               {isLoadingName && <p className="mt-2 text-sm text-gray-500">Loading location name...</p>}
@@ -113,7 +117,8 @@ export default function Home() {
               <MapOpener location={location} />
             </>
           ) : (
-            <p className="mt-2 text-gray-600">Loading location...</p>
+            // Show link generator when no location is provided
+            <LinkGenerator />
           )}
         </div>
       </div>
