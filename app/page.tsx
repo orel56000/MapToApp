@@ -9,8 +9,10 @@ import { getLocationName } from "@/lib/geocoding";
 export default function Home() {
 	const searchParams = useSearchParams();
 	const [location, setLocation] = useState<{
-		type: "coordinates" | "pluscode";
+		type: "coordinates" | "pluscode" | "business-only";
 		value: { lat?: string; lng?: string; code?: string };
+		googleBusinessUrl?: string;
+		wazeBusinessUrl?: string;
 	} | null>(null);
 	const [locationName, setLocationName] = useState<string | null>(null);
 	const [isLoadingName, setIsLoadingName] = useState(false);
@@ -35,6 +37,10 @@ export default function Home() {
 		setError(null);
 		setLocationName(null);
 
+		// Check for business URLs
+		const googleBusinessUrl = searchParams.get("google");
+		const wazeBusinessUrl = searchParams.get("waze");
+
 		// Check for plus code first
 		const plusCode = searchParams.get("code");
 
@@ -48,17 +54,30 @@ export default function Home() {
 
 			setLocation({
 				type: "pluscode",
-				value: { code: plusCode }
+				value: { code: plusCode },
+				googleBusinessUrl: googleBusinessUrl || undefined,
+				wazeBusinessUrl: wazeBusinessUrl || undefined
 			});
 			return;
 		}
 
-		// If no plus code, check for lat/lng
+		// Check for lat/lng
 		const lat = searchParams.get("lat");
 		const lng = searchParams.get("lng");
 
+		// If we have business URLs but no coordinates, create a business-only location
+		if ((!lat || !lng) && (googleBusinessUrl || wazeBusinessUrl)) {
+			setLocation({
+				type: "business-only",
+				value: {},
+				googleBusinessUrl: googleBusinessUrl || undefined,
+				wazeBusinessUrl: wazeBusinessUrl || undefined
+			});
+			return;
+		}
+
+		// If no coordinates or business URLs, show the link generator
 		if (!lat || !lng) {
-			// No location parameters found - we'll show the link generator
 			setLocation(null);
 			return;
 		}
@@ -74,7 +93,9 @@ export default function Home() {
 
 		setLocation({
 			type: "coordinates",
-			value: { lat, lng }
+			value: { lat, lng },
+			googleBusinessUrl: googleBusinessUrl || undefined,
+			wazeBusinessUrl: wazeBusinessUrl || undefined
 		});
 
 		// Fetch location name for coordinates
@@ -96,22 +117,23 @@ export default function Home() {
 		<main className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50">
 			<div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6 space-y-6">
 				<div className="text-center">
-					<h1 className="text-2xl font-bold text-gray-800">Map-To-App Location Opener</h1>
+					<h1 className="text-2xl font-bold text-gray-800">Map To App</h1>
 
 					{error ? (
 						<p className="mt-2 text-red-500">{error}</p>
 					) : location ? (
-						// Show location opener when we have valid coordinates or plus code
+						// Show Map To App when we have valid coordinates, plus code, or business URLs
 						<>
 							{locationName && <p className="mt-2 text-lg font-medium text-gray-700">{locationName}</p>}
 							{isLoadingName && <p className="mt-2 text-sm text-gray-500">Loading location name...</p>}
-							<p className="mt-2 text-gray-600">Choose an app to open this location:</p>
+							<p className="mt-2 text-gray-600">Choose how to open this location:</p>
 							{location.type === "coordinates" && location.value.lat && location.value.lng && (
 								<p className="mt-1 text-sm text-gray-500">
 									Coordinates: {location.value.lat}, {location.value.lng}
 								</p>
 							)}
 							{location.type === "pluscode" && location.value.code && <p className="mt-1 text-sm text-gray-500">Plus Code: {location.value.code}</p>}
+							{location.type === "business-only" && <p className="mt-1 text-sm text-gray-500">Business information only (no coordinates provided)</p>}
 							<MapOpener location={location} />
 						</>
 					) : (
